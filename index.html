@@ -307,6 +307,7 @@ Object.assign(translations,{"Wie viel sind 10 % von 200?":"Сколько буд
 let russian=false, observer;
 const langButton=document.getElementById('translateToggle');
 const originals=new WeakMap();
+const lastRendered=new WeakMap();
 const textNodeFilter={acceptNode(n){return n.parentElement&&['SCRIPT','STYLE','SVG'].includes(n.parentElement.tagName)?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT;}};
 function dynamicTranslation(s){
  let m;
@@ -332,13 +333,14 @@ function applyTranslation(){
  while((node=walk.nextNode())){
    if(!node.nodeValue.trim())continue;
    const current=node.nodeValue;
-   if(!originals.has(node))originals.set(node,current);
-   else if(current!==translateText(originals.get(node))&&current!==originals.get(node)){
-     // A program update replaced the node text. Treat it as new original.
+   // Distinguish changes made by the website from changes made by the translator.
+   // Never mistake a previously translated Russian string for German source text.
+   if(!originals.has(node) || (lastRendered.has(node) && current!==lastRendered.get(node))){
      originals.set(node,current);
    }
    const expected=translateText(originals.get(node));
    if(node.nodeValue!==expected)node.nodeValue=expected;
+   lastRendered.set(node,expected);
  }
  langButton.textContent=russian?'🌐 Deutsch':'🌐 Русский';
  langButton.setAttribute('aria-pressed',String(russian));
